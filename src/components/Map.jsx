@@ -1,5 +1,5 @@
-import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
-import { useEffect } from 'react';
+import { MapContainer, TileLayer, Marker, Popup, Tooltip, useMap, ScaleControl, useMapEvents } from 'react-leaflet';
+import { useEffect, useState } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 
@@ -54,6 +54,228 @@ function MapCenterController({ centerPlace }) {
     return null;
 }
 
+// Componente de Geolocalización
+function GeolocationControl() {
+    const map = useMap();
+    const [isLocating, setIsLocating] = useState(false);
+    const [userLocation, setUserLocation] = useState(null);
+
+    useEffect(() => {
+        // Crear el botón de geolocalización
+        const locationButton = L.control({ position: 'topleft' });
+
+        locationButton.onAdd = () => {
+            const div = L.DomUtil.create('div', 'leaflet-bar leaflet-control');
+            div.innerHTML = `
+                <button 
+                    id="geolocate-btn"
+                    style="
+                        background: white;
+                        width: 34px;
+                        height: 34px;
+                        border: 2px solid rgba(0,0,0,0.2);
+                        border-radius: 4px;
+                        cursor: pointer;
+                        font-size: 18px;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        transition: all 0.2s;
+                    "
+                    title="Ir a mi ubicación"
+                >
+                    📍
+                </button>
+            `;
+
+            // Prevenir que los clics en el botón se propaguen al mapa
+            L.DomEvent.disableClickPropagation(div);
+
+            const button = div.querySelector('#geolocate-btn');
+            
+            button.addEventListener('click', () => {
+                setIsLocating(true);
+                button.style.background = '#3b82f6';
+                button.innerHTML = '⌛';
+
+                map.locate({ setView: true, maxZoom: 13 });
+            });
+
+            button.addEventListener('mouseenter', () => {
+                if (!isLocating) {
+                    button.style.background = '#f3f4f6';
+                }
+            });
+
+            button.addEventListener('mouseleave', () => {
+                if (!isLocating) {
+                    button.style.background = 'white';
+                }
+            });
+
+            return div;
+        };
+
+        locationButton.addTo(map);
+
+        // Manejar la ubicación encontrada
+        const onLocationFound = (e) => {
+            setIsLocating(false);
+            setUserLocation(e.latlng);
+            
+            const button = document.querySelector('#geolocate-btn');
+            if (button) {
+                button.style.background = '#10b981';
+                button.innerHTML = '✓';
+                
+                setTimeout(() => {
+                    button.style.background = 'white';
+                    button.innerHTML = '📍';
+                }, 2000);
+            }
+
+            // Agregar un marcador en la ubicación del usuario
+            const radius = e.accuracy / 2;
+            L.marker(e.latlng, {
+                icon: L.divIcon({
+                    className: 'user-location-marker',
+                    html: `<div style="
+                        background: #3b82f6;
+                        width: 16px;
+                        height: 16px;
+                        border-radius: 50%;
+                        border: 3px solid white;
+                        box-shadow: 0 0 10px rgba(59, 130, 246, 0.5);
+                    "></div>`,
+                    iconSize: [16, 16],
+                    iconAnchor: [8, 8]
+                })
+            })
+            .addTo(map)
+            .bindPopup(`Estás aquí<br/>Precisión: ${Math.round(radius)} metros`)
+            .openPopup();
+
+            // Círculo de precisión
+            L.circle(e.latlng, { radius, color: '#3b82f6', fillColor: '#3b82f6', fillOpacity: 0.1 }).addTo(map);
+        };
+
+        const onLocationError = (e) => {
+            setIsLocating(false);
+            const button = document.querySelector('#geolocate-btn');
+            if (button) {
+                button.style.background = '#ef4444';
+                button.innerHTML = '✗';
+                
+                setTimeout(() => {
+                    button.style.background = 'white';
+                    button.innerHTML = '📍';
+                }, 2000);
+            }
+            alert('No se pudo obtener tu ubicación: ' + e.message);
+        };
+
+        map.on('locationfound', onLocationFound);
+        map.on('locationerror', onLocationError);
+
+        return () => {
+            locationButton.remove();
+            map.off('locationfound', onLocationFound);
+            map.off('locationerror', onLocationError);
+        };
+    }, [map, isLocating]);
+
+    return null;
+}
+
+// Componente para manejar clicks en el mapa
+function MapClickHandler() {
+    const [clickMarker, setClickMarker] = useState(null);
+    const map = useMapEvents({
+        click: async (e) => {
+            const { lat, lng } = e.latlng;
+            
+            // Remover marcador anterior si existe
+            if (clickMarker) {
+                map.removeLayer(clickMarker);
+            }
+
+            // Crear marcador temporal
+            const tempMarker = L.marker([lat, lng], {
+                icon: L.divIcon({
+                    className: 'temp-marker',
+                    html: `<div style="
+                        background: #8b5cf6;
+                        width: 20px;
+                        height: 20px;
+                        border-radius: 50%;
+                        border: 3px solid white;
+                        box-shadow: 0 2px 8px rgba(139, 92, 246, 0.5);
+                        animation: pulse 2s infinite;
+                    "></div>
+                    <style>
+                        @keyframes pulse {
+                            0%, 100% { opacity: 1; }
+                            50% { opacity: 0.5; }
+                        }
+                    </style>`,
+                    iconSize: [20, 20],
+                    iconAnchor: [10, 10]
+                })
+            }).addTo(map);
+
+            // Intentar obtener el nombre del lugar usando Nominatim (OpenStreetMap)
+            const popupContent = `
+                <div style="min-width: 200px;">
+                    <div style="font-weight: bold; font-size: 14px; margin-bottom: 8px; color: #8b5cf6;">
+                        📍 Coordenadas
+                    </div>
+                    <div style="font-size: 12px; color: #374151; margin-bottom: 4px;">
+                        <strong>Lat:</strong> ${lat.toFixed(6)}
+                    </div>
+                    <div style="font-size: 12px; color: #374151; margin-bottom: 8px;">
+                        <strong>Lng:</strong> ${lng.toFixed(6)}
+                    </div>
+                    <div id="location-name" style="font-size: 11px; color: #6b7280; font-style: italic;">
+                        Buscando ubicación...
+                    </div>
+                </div>
+            `;
+
+            tempMarker.bindPopup(popupContent).openPopup();
+            setClickMarker(tempMarker);
+
+            // Reverse geocoding con Nominatim
+            try {
+                const response = await fetch(
+                    `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`,
+                    {
+                        headers: {
+                            'User-Agent': 'TravelMapApp/1.0'
+                        }
+                    }
+                );
+                const data = await response.json();
+                
+                const locationName = data.display_name || 'Ubicación desconocida';
+                const nameElement = document.getElementById('location-name');
+                if (nameElement) {
+                    nameElement.innerHTML = `<strong>📌 ${locationName}</strong>`;
+                    nameElement.style.fontStyle = 'normal';
+                    nameElement.style.color = '#374151';
+                }
+            } catch (error) {
+                const nameElement = document.getElementById('location-name');
+                if (nameElement) {
+                    nameElement.innerHTML = 'No se pudo obtener el nombre' + error.message;
+                    nameElement.style.color = '#ef4444';
+                }
+            }
+        }
+    });
+
+    return null;
+}
+
 export default function MapComponent({ places, centerPlace }) {
     const center = [43.0, 12.0];
 
@@ -65,6 +287,11 @@ export default function MapComponent({ places, centerPlace }) {
             scrollWheelZoom={true}
         >
             <MapCenterController centerPlace={centerPlace} />
+            <GeolocationControl />
+            <MapClickHandler />
+            
+            {/* Control de Escala */}
+            <ScaleControl position="bottomleft" imperial={false} />
             
             <TileLayer
                 attribution='© OpenStreetMap'
@@ -77,6 +304,23 @@ export default function MapComponent({ places, centerPlace }) {
                     position={place.coordinates}
                     icon={createCustomIcon(place.category, place.id)}
                 >
+                    {/* Tooltip que aparece al pasar el mouse */}
+                    <Tooltip 
+                        direction="top" 
+                        offset={[0, -20]} 
+                        opacity={0.95}
+                        className="custom-tooltip"
+                    >
+                        <div style={{ textAlign: 'center' }}>
+                            <div style={{ fontWeight: 'bold', fontSize: '13px', marginBottom: '2px' }}>
+                                {place.name}
+                            </div>
+                            <div style={{ fontSize: '11px', color: '#6b7280' }}>
+                                {place.city}
+                            </div>
+                        </div>
+                    </Tooltip>
+
                     {/* CAMBIOS AQUÍ:
                         1. maxWidth={1000}: Ponemos un número gigante para que Leaflet NO limite el ancho.
                         2. minWidth={200}: Un mínimo seguro.

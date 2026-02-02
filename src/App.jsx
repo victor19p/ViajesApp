@@ -92,6 +92,7 @@ function App() {
   const [filters, setFilters] = useState({
     country: 'all',
     category: 'all',
+    city: 'all',
     status: 'all'
   });
 
@@ -127,6 +128,10 @@ function App() {
 
     if (filters.category !== 'all') {
       filtered = filtered.filter(place => place.category === filters.category);
+    }
+
+    if (filters.city !== 'all') {
+      filtered = filtered.filter(place => place.city === filters.city);
     }
 
     if (filters.status !== 'all') {

@@ -8,6 +8,7 @@ export default function Sidebar({
 }) {
     const [selectedCountry, setSelectedCountry] = useState('all');
     const [selectedCategory, setSelectedCategory] = useState('all');
+    const [selectedCity, setSelectedCity] = useState('all');
     const [selectedStatus, setSelectedStatus] = useState('all');
 
     // PROTECCIÓN 3: Aseguramos que trabajamos sobre arrays reales
@@ -17,20 +18,26 @@ export default function Sidebar({
     // Extraer valores únicos (Agregamos filter(Boolean) para limpiar vacíos del Excel)
     const countries = [...new Set(safePlaces.map(p => p.country).filter(Boolean))];
     const categories = [...new Set(safePlaces.map(p => p.category).filter(Boolean))];
+    const cities = [...new Set(safePlaces.map(p => p.city).filter(Boolean))].sort();
 
     const handleCountryChange = (country) => {
         setSelectedCountry(country);
-        onFilterChange({ country, category: selectedCategory, status: selectedStatus });
+        onFilterChange({ country, category: selectedCategory, city: selectedCity, status: selectedStatus });
     };
 
     const handleCategoryChange = (category) => {
         setSelectedCategory(category);
-        onFilterChange({ country: selectedCountry, category, status: selectedStatus });
+        onFilterChange({ country: selectedCountry, category, city: selectedCity, status: selectedStatus });
+    };
+
+    const handleCityChange = (city) => {
+        setSelectedCity(city);
+        onFilterChange({ country: selectedCountry, category: selectedCategory, city, status: selectedStatus });
     };
 
     const handleStatusChange = (status) => {
         setSelectedStatus(status);
-        onFilterChange({ country: selectedCountry, category: selectedCategory, status });
+        onFilterChange({ country: selectedCountry, category: selectedCategory, city: selectedCity, status });
     };
 
     // Cálculos seguros
@@ -121,6 +128,34 @@ export default function Sidebar({
                                         }`}
                                 >
                                     {category}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* Filtro por Ciudad */}
+                    <div>
+                        <h3 className="text-sm font-semibold text-gray-700 mb-3">Por Ciudad</h3>
+                        <div className="space-y-2 max-h-48 overflow-y-auto">
+                            <button
+                                onClick={() => handleCityChange('all')}
+                                className={`w-full text-left px-3 py-2 rounded-lg text-sm font-medium transition ${selectedCity === 'all'
+                                        ? 'bg-blue-500 text-white shadow-md'
+                                        : 'bg-gray-50 text-gray-700 hover:bg-gray-100'
+                                    }`}
+                            >
+                                Todas las ciudades
+                            </button>
+                            {cities.map(city => (
+                                <button
+                                    key={city}
+                                    onClick={() => handleCityChange(city)}
+                                    className={`w-full text-left px-3 py-2 rounded-lg text-sm font-medium transition ${selectedCity === city
+                                            ? 'bg-blue-500 text-white shadow-md'
+                                            : 'bg-gray-50 text-gray-700 hover:bg-gray-100'
+                                        }`}
+                                >
+                                    {city}
                                 </button>
                             ))}
                         </div>

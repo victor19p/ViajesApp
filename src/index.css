@@ -1,0 +1,72 @@
+@import 'leaflet/dist/leaflet.css';
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html, body, #root {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  width: 100%;
+}
+
+/* Estilos básicos para el contenedor del mapa */
+.leaflet-container {
+  height: 100%;
+  width: 100%;
+  background-color: #f3f4f6; /* Un gris muy suave por si carga lento el tile */
+  z-index: 0;
+}
+
+/* --- OVERRIDES DE LEAFLET PARA POPUPS BONITOS --- */
+
+/* 1. Elimina el "marco blanco" grueso que rodea al popup */
+.leaflet-popup-content-wrapper {
+  padding: 0 !important; /* Clave: quita el relleno */
+  border-radius: 0.75rem !important; /* rounded-xl de Tailwind (12px) */
+  overflow: hidden !important; /* Asegura que la imagen respete las esquinas redondeadas */
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3) !important; /* Sombra más moderna */
+}
+
+/* 2. Elimina los márgenes internos para que el contenido use el 100% del espacio */
+.leaflet-popup-content {
+  margin: 0 !important;
+  width: 100% !important;
+  line-height: 1.5;
+}
+
+/* 3. Estiliza el botón de cerrar (X) para que se vea bien sobre la foto */
+.leaflet-popup-close-button {
+  top: 8px !important;
+  right: 8px !important;
+  color: white !important; /* X blanca */
+  font-size: 24px !important;
+  font-weight: bold !important;
+  text-shadow: 0 0 5px rgba(0,0,0,0.8) !important; /* Sombra negra para contraste */
+  opacity: 0.8 !important;
+  z-index: 100 !important; /* Siempre encima de la imagen */
+  transition: opacity 0.2s;
+}
+
+.leaflet-popup-close-button:hover {
+  opacity: 1 !important;
+  color: #ffcccc !important; /* Un tono rojizo suave al pasar el mouse */
+}
+
+/* 4. Ajuste opcional para la flechita (tip) inferior */
+.leaflet-popup-tip-container {
+  width: 30px !important;
+  height: 15px !important;
+}
+
+.leaflet-popup-tip {
+  background: white !important; /* Debe coincidir con el fondo de tu tarjeta */
+  box-shadow: none !important;
+}
+
+/* Tu clase existente */
+.custom-marker {
+  background: transparent !important;
+  border: none !important;
+}
